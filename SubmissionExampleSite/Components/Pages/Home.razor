@@ -1,0 +1,38 @@
+﻿@page "/"
+@implements IDisposable
+@using BlazorApp
+@inject Database Database;
+@inject Posts Posts;
+@rendermode @(new InteractiveServerRenderMode(false)) 
+
+<PostSubmission/>
+
+<ul class="list-group mt-5">
+    @foreach (var item in Posts.RecentPosts)
+    {
+        <li class=""> @item.Name : @item.Post</li>
+    }
+</ul>
+
+@code
+{
+
+
+    // the subscribing to the event happens twice because prerendering
+    // look into if there is a decent way to not have this happen other than disabling prerendering
+    protected override void OnInitialized()
+    {
+        Database.OnNewPost += OnNewPost;
+        base.OnInitialized();
+    }
+
+    private void OnNewPost(object? sender, EventArgs e)
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        // TODO release managed resources here
+    }
+}

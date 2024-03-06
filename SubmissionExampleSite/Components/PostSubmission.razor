@@ -1,0 +1,69 @@
+@using BlazorApp
+@inject Database database;
+@inject IHttpContextAccessor HttpContextAccessor;
+@inject SubmitLimiter Limiter;
+
+@rendermode InteractiveServer
+@implements IDisposable
+<EditForm Model="@submission" OnValidSubmit="@OnValidSubmit">
+
+    <DataAnnotationsValidator/>
+
+    <ValidationSummary/>
+    <div class="mb-3">
+        <label for="Name" class="form-label">Name</label>
+        <InputText class="form-control" @bind-Value="submission.Name" id="Name"></InputText>
+    </div>
+    <div class="mb-3">
+        <label for="post" class="form-label">Post</label>
+        <InputText class="form-control" @bind-Value="submission.Post" id="post"></InputText>
+    </div>
+    <input type="submit" class="btn btn-primary" value="Post"/>
+    <label>@status</label>
+
+
+</EditForm>
+
+@code {
+    Submission submission = new();
+    string status = "";
+
+    private void OnValidSubmit(EditContext context)
+    {
+        var ip = HttpContextAccessor.HttpContext.Connection.RemoteIpAddress.ToString();
+        if (!Limiter.IsIpLimited(ip))
+        {
+            submission.Date = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+            database.InsertPost(submission);
+            Limiter.AddLimit(ip);
+            status = "Submission successful";
+           
+        }
+        else
+        {
+            status = "Submitting to fast!";
+            
+        }
+    }
+
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        database.OnNewPost += OnNewPost;
+    }
+
+    private void OnNewPost(object? sender, EventArgs e)
+    {
+        Console.WriteLine("Component notified about new post");
+    }
+
+    public void Dispose()
+    {
+        Console.WriteLine("Disposing component ");
+
+        database.OnNewPost -= OnNewPost;
+    }
+
+
+}
